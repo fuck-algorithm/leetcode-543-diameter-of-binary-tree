@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
-import { D3TreeNode, AlgorithmStep } from '../../types';
+import { D3TreeNode, AlgorithmStep, AnimationType } from '../../types';
 import { getAllNodes, getAllEdges } from '../../utils/treeUtils';
 import './TreeVisualization.css';
 
@@ -9,32 +9,143 @@ interface TreeVisualizationProps {
   currentStep: AlgorithmStep | null;
 }
 
+// 缩放范围配置
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 3;
+const ZOOM_STEP = 0.2;
+
+// 获取动画类型对应的颜色
+function getAnimationColor(type: AnimationType): string {
+  switch (type) {
+    case 'recursion-enter': return '#4ecdc4';
+    case 'recursion-exit': return '#ff6b6b';
+    case 'return-value': return '#a78bfa';
+    case 'compare': return '#fbbf24';
+    case 'update-diameter': return '#22c55e';
+    case 'param-pass': return '#60a5fa';
+    default: return '#ffa116';
+  }
+}
+
 export function TreeVisualization({ root, currentStep }: TreeVisualizationProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  
+  // 当前缩放比例状态，用于显示
+  const [zoomScale, setZoomScale] = useState(1);
 
+  // 重置视图到初始状态
+  const handleResetView = useCallback(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svg = d3.select(svgRef.current);
+    svg.transition().duration(300).call(
+      zoomRef.current.transform,
+      d3.zoomIdentity
+    );
+  }, []);
+
+  // 放大
+  const handleZoomIn = useCallback(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svg = d3.select(svgRef.current);
+    svg.transition().duration(200).call(
+      zoomRef.current.scaleBy,
+      1 + ZOOM_STEP
+    );
+  }, []);
+
+  // 缩小
+  const handleZoomOut = useCallback(() => {
+    if (!svgRef.current || !zoomRef.current) return;
+    const svg = d3.select(svgRef.current);
+    svg.transition().duration(200).call(
+      zoomRef.current.scaleBy,
+      1 - ZOOM_STEP
+    );
+  }, []);
+
+  // 初始化SVG和缩放行为（只执行一次）
   useEffect(() => {
-    if (!svgRef.current || !containerRef.current || !root) return;
+    if (!svgRef.current || !containerRef.current) return;
 
     const svg = d3.select(svgRef.current);
-    svg.selectAll('*').remove();
-
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
     svg.attr('width', width).attr('height', height);
 
-    const g = svg.append('g');
+    // 清除旧内容
+    svg.selectAll('*').remove();
+
+    // 添加箭头标记定义
+    const defs = svg.append('defs');
+    
+    // 为不同动画类型创建箭头
+    const arrowColors = ['#4ecdc4', '#ff6b6b', '#a78bfa', '#60a5fa', '#ffa116'];
+    arrowColors.forEach((color, i) => {
+      defs.append('marker')
+        .attr('id', `arrow-${i}`)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 8)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', color);
+    });
+
+    // 创建主绘图组
+    const g = svg.append('g').attr('class', 'tree-container');
+    gRef.current = g;
+
+    // 创建缩放行为
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([ZOOM_MIN, ZOOM_MAX])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+        setZoomScale(event.transform.k);
+      });
+
+    zoomRef.current = zoom;
+    svg.call(zoom);
+
+    // 窗口大小变化时更新SVG尺寸
+    const handleResize = () => {
+      if (!containerRef.current) return;
+      const newWidth = containerRef.current.clientWidth;
+      const newHeight = containerRef.current.clientHeight;
+      svg.attr('width', newWidth).attr('height', newHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 绘制树形结构（当root或currentStep变化时更新）
+  useEffect(() => {
+    if (!gRef.current || !root) return;
+
+    const g = gRef.current;
+    
+    // 清除旧的树形内容，但保留组本身
+    g.selectAll('*').remove();
 
     const nodes = getAllNodes(root);
     const edges = getAllEdges(root);
+    const nodesMap = new Map(nodes.map(n => [n.id, n]));
 
     const highlightedNodes = new Set(currentStep?.highlightedNodes || []);
     const highlightedEdges = new Set(
       (currentStep?.highlightedEdges || []).map(([a, b]) => `${a}-${b}`)
     );
     const currentNodeId = currentStep?.currentNodeId;
-
+    const animationType = currentStep?.animationType || 'none';
+    const animationData = currentStep?.animationData;
+    
     // 绘制边
     g.selectAll('.edge')
       .data(edges)
@@ -47,7 +158,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
       .attr('y2', d => d[1].y)
       .attr('stroke', d => {
         const edgeKey = `${d[0].id}-${d[1].id}`;
-        if (highlightedEdges.has(edgeKey)) return '#ffa116';
+        if (highlightedEdges.has(edgeKey)) return getAnimationColor(animationType);
         return 'rgba(255, 255, 255, 0.3)';
       })
       .attr('stroke-width', d => {
@@ -68,7 +179,9 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
     nodeGroups.append('circle')
       .attr('r', 22)
       .attr('fill', d => {
-        if (d.id === currentNodeId) return '#ffa116';
+        if (d.id === currentNodeId) {
+          return getAnimationColor(animationType);
+        }
         if (highlightedNodes.has(d.id)) return 'rgba(255, 161, 22, 0.3)';
         return 'rgba(255, 255, 255, 0.1)';
       })
@@ -113,18 +226,325 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
       }
     }
 
+    // 绘制动画效果
+    if (animationType !== 'none' && animationData) {
+      const animColor = getAnimationColor(animationType);
+
+      // 返回值传递动画 - 绘制带箭头的路径和状态标签
+      if ((animationType === 'return-value' || animationType === 'param-pass') && 
+          animationData.fromNodeId && animationData.toNodeId) {
+        const fromNode = nodesMap.get(animationData.fromNodeId);
+        const toNode = nodesMap.get(animationData.toNodeId);
+        
+        if (fromNode && toNode) {
+          const isUpward = animationType === 'return-value';
+          const startNode = isUpward ? fromNode : toNode;
+          const endNode = isUpward ? toNode : fromNode;
+          
+          // 计算路径偏移，避免与边重叠
+          const dx = endNode.x - startNode.x;
+          const dy = endNode.y - startNode.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          const offsetX = -dy / len * 15;
+          const offsetY = dx / len * 15;
+
+          // 绘制动画路径
+          const path = g.append('path')
+            .attr('d', `M${startNode.x + offsetX},${startNode.y + offsetY} L${endNode.x + offsetX},${endNode.y + offsetY}`)
+            .attr('stroke', animColor)
+            .attr('stroke-width', 2)
+            .attr('fill', 'none')
+            .attr('stroke-dasharray', '5,5')
+            .attr('marker-end', `url(#arrow-${isUpward ? 2 : 3})`);
+
+          // 路径动画
+          const totalLength = path.node()?.getTotalLength() || 0;
+          path
+            .attr('stroke-dasharray', `${totalLength} ${totalLength}`)
+            .attr('stroke-dashoffset', totalLength)
+            .transition()
+            .duration(500)
+            .attr('stroke-dashoffset', 0);
+
+          // 显示传递的值标签
+          const midX = (startNode.x + endNode.x) / 2 + offsetX;
+          const midY = (startNode.y + endNode.y) / 2 + offsetY;
+          
+          // 值传递标签背景
+          const valueText = String(animationData.value);
+          const labelWidth = Math.max(50, valueText.length * 8 + 16);
+          
+          g.append('rect')
+            .attr('class', 'value-label-bg')
+            .attr('x', midX - labelWidth / 2)
+            .attr('y', midY - 12)
+            .attr('width', labelWidth)
+            .attr('height', 24)
+            .attr('rx', 4)
+            .attr('fill', animColor)
+            .attr('opacity', 0.95);
+
+          g.append('text')
+            .attr('class', 'value-label')
+            .attr('x', midX)
+            .attr('y', midY + 4)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '11px')
+            .attr('font-weight', '600')
+            .text(valueText);
+
+          // 在目标节点上方添加状态标签
+          const targetNode = isUpward ? toNode : fromNode;
+          const stateText = isUpward ? '返回值' : '参数传递';
+          const stateLabelWidth = 60;
+          
+          g.append('rect')
+            .attr('class', 'state-label-bg')
+            .attr('x', targetNode.x - stateLabelWidth / 2)
+            .attr('y', targetNode.y - 55)
+            .attr('width', stateLabelWidth)
+            .attr('height', 20)
+            .attr('rx', 4)
+            .attr('fill', animColor)
+            .attr('opacity', 0.9);
+
+          g.append('text')
+            .attr('class', 'state-label')
+            .attr('x', targetNode.x)
+            .attr('y', targetNode.y - 41)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '11px')
+            .attr('font-weight', '600')
+            .text(stateText);
+        }
+      }
+
+      // 比较动画 - 显示比较结果和状态标签
+      if (animationType === 'compare' && animationData.compareResult) {
+        const currentNode = nodes.find(n => n.id === currentNodeId);
+        if (currentNode) {
+          // 比较标签背景
+          g.append('rect')
+            .attr('class', 'compare-label-bg')
+            .attr('x', currentNode.x - 55)
+            .attr('y', currentNode.y - 75)
+            .attr('width', 110)
+            .attr('height', 45)
+            .attr('rx', 6)
+            .attr('fill', animColor)
+            .attr('opacity', 0.95);
+
+          // 状态标题
+          g.append('text')
+            .attr('class', 'compare-title')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 58)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '10px')
+            .attr('font-weight', '500')
+            .text('比较大小');
+
+          // 比较内容
+          g.append('text')
+            .attr('class', 'compare-content')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 42)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '13px')
+            .attr('font-weight', '700')
+            .text(`${animationData.compareLeft} vs ${animationData.compareRight}`);
+
+          // 比较结果
+          g.append('text')
+            .attr('class', 'compare-result')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 28)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '10px')
+            .attr('font-weight', '500')
+            .text(`结果: ${animationData.compareResult}`);
+        }
+      }
+
+      // 递归进入/退出动画 - 添加指示器和状态标签
+      if (animationType === 'recursion-enter' || animationType === 'recursion-exit') {
+        const currentNode = nodes.find(n => n.id === currentNodeId);
+        if (currentNode) {
+          const isEnter = animationType === 'recursion-enter';
+          
+          // 添加动画圆环
+          g.append('circle')
+            .attr('cx', currentNode.x)
+            .attr('cy', currentNode.y)
+            .attr('r', 22)
+            .attr('fill', 'none')
+            .attr('stroke', animColor)
+            .attr('stroke-width', 3)
+            .attr('opacity', 1)
+            .transition()
+            .duration(600)
+            .attr('r', 35)
+            .attr('opacity', 0);
+
+          // 添加状态标签背景
+          const labelText = isEnter ? '递归进入' : '递归退出';
+          const labelWidth = 70;
+          
+          g.append('rect')
+            .attr('class', 'state-label-bg')
+            .attr('x', currentNode.x - labelWidth / 2)
+            .attr('y', currentNode.y - 55)
+            .attr('width', labelWidth)
+            .attr('height', 22)
+            .attr('rx', 4)
+            .attr('fill', animColor)
+            .attr('opacity', 0.95);
+
+          // 添加状态标签文字
+          g.append('text')
+            .attr('class', 'state-label')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 40)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '12px')
+            .attr('font-weight', '600')
+            .text(labelText);
+
+          // 添加方向箭头
+          g.append('text')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 62)
+            .attr('text-anchor', 'middle')
+            .attr('fill', animColor)
+            .attr('font-size', '14px')
+            .text(isEnter ? '↓' : '↑');
+        }
+      }
+
+      // 更新直径动画 - 显示直径计算过程
+      if (animationType === 'update-diameter') {
+        const currentNode = nodes.find(n => n.id === currentNodeId);
+        if (currentNode) {
+          // 直径更新标签背景
+          g.append('rect')
+            .attr('class', 'diameter-label-bg')
+            .attr('x', currentNode.x - 55)
+            .attr('y', currentNode.y - 70)
+            .attr('width', 110)
+            .attr('height', 40)
+            .attr('rx', 6)
+            .attr('fill', animColor)
+            .attr('opacity', 0.95);
+
+          // 状态标题
+          g.append('text')
+            .attr('class', 'diameter-title')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 53)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '10px')
+            .attr('font-weight', '500')
+            .text('更新直径');
+
+          // 直径值
+          g.append('text')
+            .attr('class', 'diameter-value')
+            .attr('x', currentNode.x)
+            .attr('y', currentNode.y - 36)
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#1a1a2e')
+            .attr('font-size', '16px')
+            .attr('font-weight', '700')
+            .text(`${animationData.value}`);
+
+          // 添加闪烁动画效果
+          g.append('circle')
+            .attr('cx', currentNode.x)
+            .attr('cy', currentNode.y)
+            .attr('r', 22)
+            .attr('fill', 'none')
+            .attr('stroke', animColor)
+            .attr('stroke-width', 4)
+            .attr('opacity', 1)
+            .transition()
+            .duration(400)
+            .attr('r', 40)
+            .attr('opacity', 0);
+        }
+      }
+    }
+
   }, [root, currentStep]);
 
   return (
     <div className="tree-visualization" ref={containerRef}>
       {root ? (
-        <svg ref={svgRef}></svg>
+        <>
+          <svg ref={svgRef}></svg>
+          {/* 缩放控制按钮 */}
+          <div className="zoom-controls">
+            <button 
+              className="zoom-btn" 
+              onClick={handleZoomIn}
+              title="放大"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z" />
+              </svg>
+            </button>
+            <span className="zoom-level">{Math.round(zoomScale * 100)}%</span>
+            <button 
+              className="zoom-btn" 
+              onClick={handleZoomOut}
+              title="缩小"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="currentColor" d="M19,13H5V11H19V13Z" />
+              </svg>
+            </button>
+            <button 
+              className="zoom-btn reset-btn" 
+              onClick={handleResetView}
+              title="重置视图"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path fill="currentColor" d="M12,5V1L7,6L12,11V7A6,6 0 0,1 18,13A6,6 0 0,1 12,19A6,6 0 0,1 6,13H4A8,8 0 0,0 12,21A8,8 0 0,0 20,13A8,8 0 0,0 12,5Z" />
+              </svg>
+            </button>
+          </div>
+          {/* 拖拽提示 */}
+          <div className="drag-hint">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path fill="currentColor" d="M13,6V11H18V7.75L22.25,12L18,16.25V13H13V18H16.25L12,22.25L7.75,18H11V13H6V16.25L1.75,12L6,7.75V11H11V6H7.75L12,1.75L16.25,6H13Z" />
+            </svg>
+            <span>拖拽移动 · 滚轮缩放</span>
+          </div>
+        </>
       ) : (
         <div className="empty-tree">请输入有效的二叉树数据</div>
       )}
       {currentStep && (
         <div className="step-info">
-          <div className="step-number">步骤 {currentStep.stepIndex + 1}</div>
+          <div className="step-number">
+            步骤 {currentStep.stepIndex + 1}
+            {currentStep.animationType && currentStep.animationType !== 'none' && (
+              <span className={`animation-indicator ${currentStep.animationType}`}>
+                {currentStep.animationType === 'recursion-enter' && '📥 递归进入'}
+                {currentStep.animationType === 'recursion-exit' && '📤 递归退出'}
+                {currentStep.animationType === 'return-value' && '⬆️ 返回值'}
+                {currentStep.animationType === 'compare' && '🔄 比较'}
+                {currentStep.animationType === 'update-diameter' && '✅ 更新直径'}
+                {currentStep.animationType === 'param-pass' && '⬇️ 参数传递'}
+              </span>
+            )}
+          </div>
           <div className="step-description">{currentStep.description}</div>
           <div className="diameter-display">
             当前直径: <span className="diameter-value">{currentStep.currentDiameter}</span>

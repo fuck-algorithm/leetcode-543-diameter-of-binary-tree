@@ -1,0 +1,239 @@
+/* 弹窗遮罩层 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 弹窗内容 */
+.modal-content {
+  background: #1a1a2e;
+  border-radius: 12px;
+  max-width: 700px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid rgba(255, 161, 22, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 关闭按钮 */
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #a0a0a0;
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: rgba(255, 107, 107, 0.2);
+  color: #ff6b6b;
+}
+
+/* 标题 */
+.modal-title {
+  padding: 24px 24px 16px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffa116;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.title-icon {
+  font-size: 24px;
+}
+
+/* 弹窗主体 */
+.modal-body {
+  padding: 20px 24px 24px;
+}
+
+/* 章节 */
+.algo-section {
+  margin-bottom: 24px;
+}
+
+.algo-section:last-child {
+  margin-bottom: 0;
+}
+
+.algo-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4ecdc4;
+  margin: 0 0 12px 0;
+}
+
+.algo-section p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d0d0d0;
+  margin: 0 0 10px 0;
+}
+
+.algo-section strong {
+  color: #ffa116;
+}
+
+/* 公式框 */
+.formula-box {
+  background: rgba(255, 161, 22, 0.1);
+  border: 1px solid rgba(255, 161, 22, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 12px 0;
+}
+
+.formula-box code {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 14px;
+  color: #ffa116;
+}
+
+/* 步骤列表 */
+.step-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #d0d0d0;
+}
+
+.step-list li {
+  margin-bottom: 10px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.step-list li strong {
+  color: #a78bfa;
+}
+
+/* 示例框 */
+.example-box {
+  background: rgba(78, 205, 196, 0.1);
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.example-box pre {
+  margin: 0;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e0e0e0;
+  white-space: pre;
+}
+
+/* 复杂度列表 */
+.complexity-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #d0d0d0;
+}
+
+.complexity-list li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.complexity-list strong {
+  color: #60a5fa;
+}
+
+/* 代码框 */
+.code-box {
+  background: #0d0d1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.code-box pre {
+  margin: 0;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e0e0e0;
+  white-space: pre;
+}
+
+/* 关键点列表 */
+.key-points {
+  margin: 0;
+  padding-left: 20px;
+  color: #d0d0d0;
+}
+
+.key-points li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.key-points strong {
+  color: #22c55e;
+}
+
+/* 滚动条样式 */
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 161, 22, 0.3);
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 161, 22, 0.5);
+}

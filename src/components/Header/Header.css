@@ -48,6 +48,37 @@
 .header-right {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+/* 算法思路按钮 */
+.algo-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 161, 22, 0.15);
+  border: 1px solid rgba(255, 161, 22, 0.4);
+  border-radius: 8px;
+  color: #ffa116;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.algo-btn:hover {
+  background: rgba(255, 161, 22, 0.25);
+  border-color: #ffa116;
+  transform: translateY(-1px);
+}
+
+.algo-btn:active {
+  transform: translateY(0);
+}
+
+.algo-btn svg {
+  flex-shrink: 0;
 }
 
 .github-link {
