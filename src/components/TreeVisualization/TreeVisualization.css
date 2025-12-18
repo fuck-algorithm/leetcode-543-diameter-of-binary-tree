@@ -1,0 +1,56 @@
+.tree-visualization {
+  flex: 1;
+  position: relative;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tree-visualization svg {
+  display: block;
+}
+
+.empty-tree {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #808080;
+  font-size: 16px;
+}
+
+.step-info {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.step-number {
+  font-size: 12px;
+  color: #ffa116;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.step-description {
+  font-size: 14px;
+  color: #e0e0e0;
+  line-height: 1.5;
+}
+
+.diameter-display {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #a0a0a0;
+}
+
+.diameter-value {
+  color: #4ecdc4;
+  font-weight: 700;
+  font-size: 16px;
+}

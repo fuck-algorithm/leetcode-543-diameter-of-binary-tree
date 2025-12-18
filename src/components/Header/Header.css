@@ -1,0 +1,67 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.title-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e0e0e0;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.title-link:hover {
+  color: #ffa116;
+}
+
+.problem-number {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffa116;
+}
+
+.problem-title {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.external-link-icon {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.title-link:hover .external-link-icon {
+  opacity: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.github-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #e0e0e0;
+  transition: all 0.2s;
+}
+
+.github-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
