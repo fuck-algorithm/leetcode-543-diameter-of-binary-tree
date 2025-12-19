@@ -200,9 +200,6 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
 
     // 当前步骤的高亮状态
     const highlightedNodes = new Set(currentStep?.highlightedNodes || []);
-    const highlightedEdges = new Set(
-      (currentStep?.highlightedEdges || []).map(([a, b]) => `${a}-${b}`)
-    );
     const currentNodeId = currentStep?.currentNodeId;
     const animationType = currentStep?.animationType || 'none';
     const animationData = currentStep?.animationData;
