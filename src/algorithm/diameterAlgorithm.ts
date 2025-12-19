@@ -185,6 +185,55 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       return 0;
     }
 
+    // ========== 处理 isNull 的 D3TreeNode（可视化用的空节点） ==========
+    if (node.isNull) {
+      const currentPath = [...path, node.id];
+      
+      // 进入空节点
+      steps.push(createStep(
+        stepIndex++,
+        `📥 递归进入 NULL 节点`,
+        node.id, currentPath, [], [...diameterPath], globalDiameter,
+        [
+          { name: 'diameter', value: String(globalDiameter), line: 2 },
+          { name: 'node', value: 'null', line: 9 },
+        ],
+        9,
+        'recursion-enter',
+        { toNodeId: node.id, value: 'null' }
+      ));
+
+      // 检查 node == null，返回 0
+      steps.push(createStep(
+        stepIndex++,
+        `🔍 检查 node == null 为 true，返回深度 0`,
+        node.id, currentPath, [], [...diameterPath], globalDiameter,
+        [
+          { name: 'diameter', value: String(globalDiameter), line: 2 },
+          { name: 'return', value: '0', line: 11 },
+        ],
+        10,
+        'return-value',
+        { fromNodeId: node.id, toNodeId: parentId || undefined, value: 0 }
+      ));
+
+      // 退出空节点
+      steps.push(createStep(
+        stepIndex++,
+        `📤 递归退出 NULL 节点，返回深度 0`,
+        node.id, currentPath, [], [...diameterPath], globalDiameter,
+        [
+          { name: 'diameter', value: String(globalDiameter), line: 2 },
+          { name: 'return', value: '0', line: 11 },
+        ],
+        11,
+        'recursion-exit',
+        { fromNodeId: node.id, toNodeId: parentId || undefined, value: 0 }
+      ));
+
+      return 0;
+    }
+
     const currentPath = [...path, node.id];
 
     // ========== 递归进入 ==========
@@ -199,11 +248,12 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       ],
       9,
       'recursion-enter',
-      { toNodeId: node.id, value: node.val }
+      { toNodeId: node.id, value: node.val ?? 'null' }
     ));
 
     // ========== 处理左子树 ==========
     // 递归调用depth(node.left)，进入左子树
+    const leftChildLabel = node.left ? (node.left.isNull ? 'null' : `node=${node.left.val}`) : 'null';
     steps.push(createStep(
       stepIndex++,
       `⬇️ 递归调用depth(node.left)，进入左子树`,
@@ -216,7 +266,7 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       ],
       13,
       'param-pass',
-      { fromNodeId: node.id, toNodeId: node.left?.id, value: node.left ? `node=${node.left.val}` : 'null' }
+      { fromNodeId: node.id, toNodeId: node.left?.id, value: leftChildLabel }
     ));
 
     // 递归计算左子树深度
@@ -241,6 +291,7 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
 
     // ========== 处理右子树 ==========
     // 递归调用depth(node.right)，进入右子树
+    const rightChildLabel = node.right ? (node.right.isNull ? 'null' : `node=${node.right.val}`) : 'null';
     steps.push(createStep(
       stepIndex++,
       `⬇️ 递归调用depth(node.right)，进入右子树`,
@@ -254,7 +305,7 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       ],
       14,
       'param-pass',
-      { fromNodeId: node.id, toNodeId: node.right?.id, value: node.right ? `node=${node.right.val}` : 'null' }
+      { fromNodeId: node.id, toNodeId: node.right?.id, value: rightChildLabel }
     ));
 
     // 递归计算右子树深度

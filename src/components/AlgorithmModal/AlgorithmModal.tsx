@@ -131,24 +131,47 @@ export function AlgorithmModal({ isOpen, onClose }: AlgorithmModalProps) {
           <section className="algo-section">
             <h3>💻 代码实现</h3>
             <div className="code-box">
-              <pre>{`class Solution {
+              <pre>{`/**
+ * 二叉树直径计算
+ * 
+ * 思路：通过深度优先搜索(DFS)遍历每个节点，
+ * 计算经过每个节点的最长路径，取最大值
+ */
+class Solution {
+    // 全局变量：记录遍历过程中发现的最大直径
     private int diameter = 0;
     
+    /**
+     * 主方法：计算二叉树的直径
+     * @param root 二叉树的根节点
+     * @return 二叉树的直径（最长路径的边数）
+     */
     public int diameterOfBinaryTree(TreeNode root) {
-        depth(root);
+        depth(root);  // 通过计算深度的过程，顺便更新直径
         return diameter;
     }
     
+    /**
+     * 辅助方法：计算以 node 为根的子树深度
+     * 同时在遍历过程中更新全局最大直径
+     * 
+     * @param node 当前节点
+     * @return 以该节点为根的子树深度
+     */
     private int depth(TreeNode node) {
+        // 递归终止条件：空节点深度为0
         if (node == null) return 0;
         
+        // 递归计算左子树深度
         int leftDepth = depth(node.left);
+        // 递归计算右子树深度
         int rightDepth = depth(node.right);
         
-        // 更新直径：经过当前节点的最长路径
+        // 关键步骤：更新直径
+        // 经过当前节点的路径长度 = 左子树深度 + 右子树深度
         diameter = Math.max(diameter, leftDepth + rightDepth);
         
-        // 返回当前子树的深度
+        // 返回当前子树的深度 = 较深子树的深度 + 1
         return Math.max(leftDepth, rightDepth) + 1;
     }
 }`}</pre>

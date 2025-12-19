@@ -125,32 +125,21 @@ export function convertToD3Tree(
 
   // 递归转换子节点
   // 左子节点ID后缀为'-L'，右子节点ID后缀为'-R'
-  const hasLeftChild = node.left !== null;
-  const hasRightChild = node.right !== null;
-  const isLeaf = !hasLeftChild && !hasRightChild;
-
-  // 如果是叶子节点，不创建空子节点
-  if (isLeaf) {
-    d3Node.left = null;
-    d3Node.right = null;
-  } else {
-    // 非叶子节点，递归处理子节点
-    // 如果某一侧没有子节点，会创建一个空节点来显示 NULL
-    d3Node.left = convertToD3Tree(
-      node.left, 
-      `${id}-L`, 
-      depth + 1, 
-      d3Node, 
-      includeNullNodes
-    );
-    d3Node.right = convertToD3Tree(
-      node.right, 
-      `${id}-R`, 
-      depth + 1, 
-      d3Node, 
-      includeNullNodes
-    );
-  }
+  // 所有节点（包括叶子节点）都显示其空孩子，这样递归到 null 返回 0 的过程才完整
+  d3Node.left = convertToD3Tree(
+    node.left, 
+    `${id}-L`, 
+    depth + 1, 
+    d3Node, 
+    includeNullNodes
+  );
+  d3Node.right = convertToD3Tree(
+    node.right, 
+    `${id}-R`, 
+    depth + 1, 
+    d3Node, 
+    includeNullNodes
+  );
 
   return d3Node;
 }
@@ -179,10 +168,10 @@ export function calculateTreeLayout(
   if (!root) return;
 
   const maxDepth = getMaxDepth(root);
-  // 节点之间的最小水平间距
-  const nodeSpacing = 60;
-  // 层级之间的垂直间距，根据树的深度自适应
-  const levelHeight = Math.min(80, (height - 150) / (maxDepth + 1));
+  // 节点之间的最小水平间距（增大间距让树更舒展）
+  const nodeSpacing = 100;
+  // 层级之间的垂直间距，根据树的深度自适应（增大垂直间距）
+  const levelHeight = Math.min(120, (height - 100) / (maxDepth + 1));
 
   // 用于追踪下一个可用的x坐标
   let nextX = 0;

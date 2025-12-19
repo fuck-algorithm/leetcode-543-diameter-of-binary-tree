@@ -38,26 +38,27 @@ const ZOOM_STEP = 0.2;
 /**
  * 根据动画类型获取对应的颜色
  * 
- * 不同的动画类型使用不同的颜色，便于用户区分：
- * - 递归进入：青色
- * - 递归退出：红色
- * - 返回值传递：紫色
- * - 比较操作：黄色
- * - 更新直径：绿色
- * - 参数传递：蓝色
+ * 简化的颜色方案，相关操作使用相同颜色：
+ * - 递归进入/退出：青色（表示递归调用栈的变化）
+ * - 参数传递/返回值传递：紫色（表示数据在节点间流动）
+ * - 比较/更新直径：黄色（表示计算和更新操作）
  * 
  * @param type - 动画类型
  * @returns 对应的颜色值
  */
 function getAnimationColor(type: AnimationType): string {
   switch (type) {
-    case 'recursion-enter': return '#4ecdc4';  // 青色 - 递归进入
-    case 'recursion-exit': return '#ff6b6b';   // 红色 - 递归退出
-    case 'return-value': return '#a78bfa';     // 紫色 - 返回值传递
-    case 'compare': return '#fbbf24';          // 黄色 - 比较操作
-    case 'update-diameter': return '#22c55e';  // 绿色 - 更新直径
-    case 'param-pass': return '#60a5fa';       // 蓝色 - 参数传递
-    default: return '#ffa116';                 // 橙色 - 默认
+    case 'recursion-enter':   // 递归进入
+    case 'recursion-exit':    // 递归退出
+      return '#4ecdc4';       // 青色 - 递归调用栈变化
+    case 'param-pass':        // 参数传递
+    case 'return-value':      // 返回值传递
+      return '#a78bfa';       // 紫色 - 数据流动
+    case 'compare':           // 比较操作
+    case 'update-diameter':   // 更新直径
+      return '#fbbf24';       // 黄色 - 计算和更新
+    default: 
+      return '#ffa116';       // 橙色 - 默认
   }
 }
 
@@ -222,6 +223,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
       .attr('stroke-dasharray', '4,4'); // 虚线样式
 
     // 绘制连接到实际节点的边（实线）
+    // 边的颜色保持不变，不随动画类型改变
     g.selectAll('.edge-real')
       .data(edges.filter(e => !e[2])) // 只选择连接到实际节点的边
       .enter()
@@ -231,16 +233,8 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
       .attr('y1', d => d[0].y)
       .attr('x2', d => d[1].x)
       .attr('y2', d => d[1].y)
-      .attr('stroke', d => {
-        const edgeKey = `${d[0].id}-${d[1].id}`;
-        if (highlightedEdges.has(edgeKey)) return getAnimationColor(animationType);
-        return 'rgba(255, 255, 255, 0.3)';
-      })
-      .attr('stroke-width', d => {
-        const edgeKey = `${d[0].id}-${d[1].id}`;
-        if (highlightedEdges.has(edgeKey)) return 3;
-        return 2;
-      });
+      .attr('stroke', 'rgba(255, 255, 255, 0.3)')
+      .attr('stroke-width', 2);
 
     // ========== 绘制空节点（NULL节点） ==========
     const nullNodeGroups = g.selectAll('.node-null')
@@ -341,9 +335,10 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
         const toNode = nodesMap.get(animationData.toNodeId);
         
         if (fromNode && toNode) {
-          const isUpward = animationType === 'return-value';
-          const startNode = isUpward ? fromNode : toNode;
-          const endNode = isUpward ? toNode : fromNode;
+          // 参数传递：从父节点(from)到子节点(to)，箭头向下
+          // 返回值：从子节点(from)到父节点(to)，箭头向上
+          const startNode = fromNode;
+          const endNode = toNode;
           
           // 计算路径偏移，避免与边重叠
           const dx = endNode.x - startNode.x;
@@ -359,7 +354,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
             .attr('stroke-width', 2)
             .attr('fill', 'none')
             .attr('stroke-dasharray', '5,5')
-            .attr('marker-end', `url(#arrow-${isUpward ? 2 : 3})`);
+            .attr('marker-end', `url(#arrow-2)`);
 
           // 路径动画
           const totalLength = path.node()?.getTotalLength() || 0;
@@ -399,8 +394,9 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
             .text(valueText);
 
           // 在目标节点上方添加状态标签
-          const targetNode = isUpward ? toNode : fromNode;
-          const stateText = isUpward ? '返回值' : '参数传递';
+          const isParamPass = animationType === 'param-pass';
+          const targetNode = endNode;
+          const stateText = isParamPass ? '参数传递' : '返回值';
           const stateLabelWidth = 60;
           
           g.append('rect')
@@ -433,9 +429,9 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
           g.append('rect')
             .attr('class', 'compare-label-bg')
             .attr('x', currentNode.x - 55)
-            .attr('y', currentNode.y - 75)
+            .attr('y', currentNode.y - 85)
             .attr('width', 110)
-            .attr('height', 45)
+            .attr('height', 55)
             .attr('rx', 6)
             .attr('fill', animColor)
             .attr('opacity', 0.95);
@@ -444,7 +440,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
           g.append('text')
             .attr('class', 'compare-title')
             .attr('x', currentNode.x)
-            .attr('y', currentNode.y - 58)
+            .attr('y', currentNode.y - 66)
             .attr('text-anchor', 'middle')
             .attr('fill', '#1a1a2e')
             .attr('font-size', '10px')
@@ -455,7 +451,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
           g.append('text')
             .attr('class', 'compare-content')
             .attr('x', currentNode.x)
-            .attr('y', currentNode.y - 42)
+            .attr('y', currentNode.y - 48)
             .attr('text-anchor', 'middle')
             .attr('fill', '#1a1a2e')
             .attr('font-size', '13px')
@@ -466,7 +462,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
           g.append('text')
             .attr('class', 'compare-result')
             .attr('x', currentNode.x)
-            .attr('y', currentNode.y - 28)
+            .attr('y', currentNode.y - 32)
             .attr('text-anchor', 'middle')
             .attr('fill', '#1a1a2e')
             .attr('font-size', '10px')
