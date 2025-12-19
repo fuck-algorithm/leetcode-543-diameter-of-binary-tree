@@ -212,7 +212,7 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
           { name: 'diameter', value: String(globalDiameter), line: 2 },
           { name: 'return', value: '0', line: 11 },
         ],
-        10,
+        11,
         'return-value',
         { fromNodeId: node.id, toNodeId: parentId || undefined, value: 0 }
       ));
