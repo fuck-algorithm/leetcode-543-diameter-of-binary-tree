@@ -143,7 +143,7 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
     '调用depth(root)，传递根节点参数',
     root.id, [root.id], [], [], 0,
     [{ name: 'diameter', value: '0', line: 2 }],
-    4,
+    5,
     'param-pass',
     { toNodeId: root.id, value: `node=${root.val}` }
   ));
@@ -264,7 +264,7 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
         { name: 'diameter', value: String(globalDiameter), line: 2 },
         { name: 'node.val', value: String(node.val), line: 9 },
       ],
-      13,
+      14,
       'param-pass',
       { fromNodeId: node.id, toNodeId: node.left?.id, value: leftChildLabel }
     ));
@@ -282,9 +282,9 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
         { name: 'node.val', value: String(node.val), line: 9 },
-        { name: 'leftDepth', value: String(leftDepth), line: 13 },
+        { name: 'leftDepth', value: String(leftDepth), line: 14 },
       ],
-      13,
+      14,
       'return-value',
       { fromNodeId: node.left?.id, toNodeId: node.id, value: leftDepth }
     ));
@@ -301,9 +301,9 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
         { name: 'node.val', value: String(node.val), line: 9 },
-        { name: 'leftDepth', value: String(leftDepth), line: 13 },
+        { name: 'leftDepth', value: String(leftDepth), line: 14 },
       ],
-      14,
+      15,
       'param-pass',
       { fromNodeId: node.id, toNodeId: node.right?.id, value: rightChildLabel }
     ));
@@ -321,10 +321,10 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
         { name: 'node.val', value: String(node.val), line: 9 },
-        { name: 'leftDepth', value: String(leftDepth), line: 13 },
-        { name: 'rightDepth', value: String(rightDepth), line: 14 },
+        { name: 'leftDepth', value: String(leftDepth), line: 14 },
+        { name: 'rightDepth', value: String(rightDepth), line: 15 },
       ],
-      14,
+      15,
       'return-value',
       { fromNodeId: node.right?.id, toNodeId: node.id, value: rightDepth }
     ));
@@ -342,9 +342,9 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       node.id, currentPath, [], [...diameterPath], globalDiameter,
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
-        { name: 'leftDepth + rightDepth', value: String(newDiameter), line: 16 },
+        { name: 'leftDepth + rightDepth', value: String(newDiameter), line: 17 },
       ],
-      16,
+      17,
       'compare',
       { compareLeft: newDiameter, compareRight: oldDiameter, compareResult: shouldUpdate ? '>' : '≤' }
     ));
@@ -366,10 +366,10 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
         { name: 'node.val', value: String(node.val), line: 9 },
-        { name: 'leftDepth', value: String(leftDepth), line: 13 },
-        { name: 'rightDepth', value: String(rightDepth), line: 14 },
+        { name: 'leftDepth', value: String(leftDepth), line: 14 },
+        { name: 'rightDepth', value: String(rightDepth), line: 15 },
       ],
-      16,
+      17,
       'update-diameter',
       { value: globalDiameter },
       leftDepth,
@@ -386,10 +386,10 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       node.id, currentPath, [], [...diameterPath], globalDiameter,
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
-        { name: 'max(leftDepth, rightDepth)', value: String(Math.max(leftDepth, rightDepth)), line: 18 },
-        { name: 'return', value: String(depth), line: 18 },
+        { name: 'max(leftDepth, rightDepth)', value: String(Math.max(leftDepth, rightDepth)), line: 19 },
+        { name: 'return', value: String(depth), line: 19 },
       ],
-      18,
+      19,
       'compare',
       { compareLeft: leftDepth, compareRight: rightDepth, compareResult: `max=${Math.max(leftDepth, rightDepth)}` }
     ));
@@ -402,9 +402,9 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
       node.id, currentPath, [], [...diameterPath], globalDiameter,
       [
         { name: 'diameter', value: String(globalDiameter), line: 2 },
-        { name: 'return', value: String(depth), line: 18 },
+        { name: 'return', value: String(depth), line: 19 },
       ],
-      18,
+      19,
       'recursion-exit',
       { fromNodeId: node.id, toNodeId: parentId || undefined, value: depth }
     ));
@@ -423,9 +423,9 @@ export function generateAlgorithmSteps(root: D3TreeNode | null): AlgorithmStep[]
     null, [], [], [...diameterPath], globalDiameter,
     [
       { name: 'diameter', value: String(globalDiameter), line: 2 },
-      { name: 'return', value: String(globalDiameter), line: 5 },
+      { name: 'return', value: String(globalDiameter), line: 6 },
     ],
-    5
+    6
   ));
 
   return steps;
