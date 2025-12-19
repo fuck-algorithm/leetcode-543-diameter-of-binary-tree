@@ -25,12 +25,13 @@ export interface TreeNode {
  * - 位置信息（x, y坐标）
  * - 唯一标识符（用于动画和数据绑定）
  * - 状态信息（高亮、是否在直径路径上）
+ * - 空节点标识（用于显示NULL节点）
  */
 export interface D3TreeNode {
   /** 节点唯一标识符，格式如 '0', '0-L', '0-R', '0-L-L' 等 */
   id: string;
-  /** 节点值 */
-  val: number;
+  /** 节点值，空节点时为null */
+  val: number | null;
   /** 节点在画布上的x坐标 */
   x: number;
   /** 节点在画布上的y坐标 */
@@ -47,6 +48,8 @@ export interface D3TreeNode {
   highlighted: boolean;
   /** 是否在直径路径上 */
   isOnDiameterPath: boolean;
+  /** 是否为空节点（NULL节点） */
+  isNull: boolean;
 }
 
 /**

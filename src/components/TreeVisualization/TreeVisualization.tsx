@@ -1,39 +1,86 @@
+/**
+ * 树可视化组件
+ * 
+ * 使用 D3.js 绘制二叉树，并根据算法执行步骤显示动画效果。
+ * 
+ * 主要功能：
+ * - 绘制二叉树节点和边
+ * - 显示空节点（NULL）用虚线表示
+ * - 支持缩放和拖拽
+ * - 根据算法步骤高亮节点和边
+ * - 显示各种动画效果（递归进入/退出、返回值传递、比较、更新直径等）
+ */
+
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as d3 from 'd3';
 import { D3TreeNode, AlgorithmStep, AnimationType } from '../../types';
-import { getAllNodes, getAllEdges } from '../../utils/treeUtils';
+import { getAllNodes, getAllEdges, getRealNodes, getNullNodes, calculateTreeLayout } from '../../utils/treeUtils';
 import './TreeVisualization.css';
 
+/**
+ * TreeVisualization 组件的属性接口
+ */
 interface TreeVisualizationProps {
+  /** D3格式的树根节点 */
   root: D3TreeNode | null;
+  /** 当前算法执行步骤 */
   currentStep: AlgorithmStep | null;
 }
 
-// 缩放范围配置
+// ========== 缩放配置常量 ==========
+/** 最小缩放比例 */
 const ZOOM_MIN = 0.3;
+/** 最大缩放比例 */
 const ZOOM_MAX = 3;
+/** 每次缩放的步进值 */
 const ZOOM_STEP = 0.2;
 
-// 获取动画类型对应的颜色
+/**
+ * 根据动画类型获取对应的颜色
+ * 
+ * 不同的动画类型使用不同的颜色，便于用户区分：
+ * - 递归进入：青色
+ * - 递归退出：红色
+ * - 返回值传递：紫色
+ * - 比较操作：黄色
+ * - 更新直径：绿色
+ * - 参数传递：蓝色
+ * 
+ * @param type - 动画类型
+ * @returns 对应的颜色值
+ */
 function getAnimationColor(type: AnimationType): string {
   switch (type) {
-    case 'recursion-enter': return '#4ecdc4';
-    case 'recursion-exit': return '#ff6b6b';
-    case 'return-value': return '#a78bfa';
-    case 'compare': return '#fbbf24';
-    case 'update-diameter': return '#22c55e';
-    case 'param-pass': return '#60a5fa';
-    default: return '#ffa116';
+    case 'recursion-enter': return '#4ecdc4';  // 青色 - 递归进入
+    case 'recursion-exit': return '#ff6b6b';   // 红色 - 递归退出
+    case 'return-value': return '#a78bfa';     // 紫色 - 返回值传递
+    case 'compare': return '#fbbf24';          // 黄色 - 比较操作
+    case 'update-diameter': return '#22c55e';  // 绿色 - 更新直径
+    case 'param-pass': return '#60a5fa';       // 蓝色 - 参数传递
+    default: return '#ffa116';                 // 橙色 - 默认
   }
 }
 
+/**
+ * TreeVisualization 组件
+ * 
+ * 功能：
+ * - 使用 SVG 绘制二叉树
+ * - 支持鼠标拖拽和滚轮缩放
+ * - 根据算法步骤显示节点高亮和动画效果
+ * - 显示当前步骤信息和直径值
+ */
 export function TreeVisualization({ root, currentStep }: TreeVisualizationProps) {
+  // SVG 元素引用
   const svgRef = useRef<SVGSVGElement>(null);
+  // 容器 div 引用，用于获取尺寸
   const containerRef = useRef<HTMLDivElement>(null);
+  // D3 缩放行为引用
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  // D3 绑定的主绘图组引用
   const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
   
-  // 当前缩放比例状态，用于显示
+  // 当前缩放比例状态，用于在界面上显示百分比
   const [zoomScale, setZoomScale] = useState(1);
 
   // 重置视图到初始状态
@@ -127,17 +174,30 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
 
   // 绘制树形结构（当root或currentStep变化时更新）
   useEffect(() => {
-    if (!gRef.current || !root) return;
+    if (!gRef.current || !root || !containerRef.current) return;
 
     const g = gRef.current;
+    
+    // 获取容器的实际尺寸
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
+    
+    // 重新计算树的布局，确保居中
+    // 需要减去底部步骤信息区域的高度（约100px）
+    const availableHeight = containerHeight - 120;
+    calculateTreeLayout(root, containerWidth, availableHeight);
     
     // 清除旧的树形内容，但保留组本身
     g.selectAll('*').remove();
 
-    const nodes = getAllNodes(root);
+    // 获取所有节点和边
+    const allNodes = getAllNodes(root);
+    const realNodes = getRealNodes(root);
+    const nullNodes = getNullNodes(root);
     const edges = getAllEdges(root);
-    const nodesMap = new Map(nodes.map(n => [n.id, n]));
+    const nodesMap = new Map(allNodes.map(n => [n.id, n]));
 
+    // 当前步骤的高亮状态
     const highlightedNodes = new Set(currentStep?.highlightedNodes || []);
     const highlightedEdges = new Set(
       (currentStep?.highlightedEdges || []).map(([a, b]) => `${a}-${b}`)
@@ -146,12 +206,27 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
     const animationType = currentStep?.animationType || 'none';
     const animationData = currentStep?.animationData;
     
-    // 绘制边
-    g.selectAll('.edge')
-      .data(edges)
+    // ========== 绘制边 ==========
+    // 先绘制连接到空节点的边（虚线）
+    g.selectAll('.edge-null')
+      .data(edges.filter(e => e[2])) // 只选择连接到空节点的边
       .enter()
       .append('line')
-      .attr('class', 'edge')
+      .attr('class', 'edge edge-null')
+      .attr('x1', d => d[0].x)
+      .attr('y1', d => d[0].y)
+      .attr('x2', d => d[1].x)
+      .attr('y2', d => d[1].y)
+      .attr('stroke', 'rgba(255, 255, 255, 0.2)')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '4,4'); // 虚线样式
+
+    // 绘制连接到实际节点的边（实线）
+    g.selectAll('.edge-real')
+      .data(edges.filter(e => !e[2])) // 只选择连接到实际节点的边
+      .enter()
+      .append('line')
+      .attr('class', 'edge edge-real')
       .attr('x1', d => d[0].x)
       .attr('y1', d => d[0].y)
       .attr('x2', d => d[1].x)
@@ -167,12 +242,37 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
         return 2;
       });
 
-    // 绘制节点
-    const nodeGroups = g.selectAll('.node')
-      .data(nodes)
+    // ========== 绘制空节点（NULL节点） ==========
+    const nullNodeGroups = g.selectAll('.node-null')
+      .data(nullNodes)
       .enter()
       .append('g')
-      .attr('class', 'node')
+      .attr('class', 'node node-null')
+      .attr('transform', d => `translate(${d.x}, ${d.y})`);
+
+    // 空节点圆圈（虚线边框）
+    nullNodeGroups.append('circle')
+      .attr('r', 18)
+      .attr('fill', 'rgba(100, 100, 100, 0.1)')
+      .attr('stroke', 'rgba(255, 255, 255, 0.25)')
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '3,3'); // 虚线边框
+
+    // 空节点文字 "NULL"
+    nullNodeGroups.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('fill', 'rgba(255, 255, 255, 0.4)')
+      .attr('font-size', '10px')
+      .attr('font-weight', '500')
+      .text('NULL');
+
+    // ========== 绘制实际节点 ==========
+    const nodeGroups = g.selectAll('.node-real')
+      .data(realNodes)
+      .enter()
+      .append('g')
+      .attr('class', 'node node-real')
       .attr('transform', d => `translate(${d.x}, ${d.y})`);
 
     // 节点圆圈
@@ -199,25 +299,29 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
       .attr('fill', d => d.id === currentNodeId ? '#1a1a2e' : '#e0e0e0')
       .attr('font-size', '14px')
       .attr('font-weight', '600')
-      .text(d => d.val);
+      .text(d => d.val !== null ? d.val : '');
 
     // 显示深度信息
     if (currentStep?.leftDepth !== undefined || currentStep?.rightDepth !== undefined) {
-      const currentNode = nodes.find(n => n.id === currentNodeId);
+      const currentNode = realNodes.find(n => n.id === currentNodeId);
       if (currentNode) {
+        // 获取左子节点（可能是空节点）
         if (currentStep.leftDepth !== undefined && currentNode.left) {
+          const leftChild = currentNode.left;
           g.append('text')
-            .attr('x', (currentNode.x + currentNode.left.x) / 2 - 15)
-            .attr('y', (currentNode.y + currentNode.left.y) / 2)
+            .attr('x', (currentNode.x + leftChild.x) / 2 - 15)
+            .attr('y', (currentNode.y + leftChild.y) / 2)
             .attr('fill', '#4ecdc4')
             .attr('font-size', '12px')
             .attr('font-weight', '600')
             .text(`L:${currentStep.leftDepth}`);
         }
+        // 获取右子节点（可能是空节点）
         if (currentStep.rightDepth !== undefined && currentNode.right) {
+          const rightChild = currentNode.right;
           g.append('text')
-            .attr('x', (currentNode.x + currentNode.right.x) / 2 + 5)
-            .attr('y', (currentNode.y + currentNode.right.y) / 2)
+            .attr('x', (currentNode.x + rightChild.x) / 2 + 5)
+            .attr('y', (currentNode.y + rightChild.y) / 2)
             .attr('fill', '#ff6b6b')
             .attr('font-size', '12px')
             .attr('font-weight', '600')
@@ -323,7 +427,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
 
       // 比较动画 - 显示比较结果和状态标签
       if (animationType === 'compare' && animationData.compareResult) {
-        const currentNode = nodes.find(n => n.id === currentNodeId);
+        const currentNode = realNodes.find(n => n.id === currentNodeId);
         if (currentNode) {
           // 比较标签背景
           g.append('rect')
@@ -373,7 +477,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
 
       // 递归进入/退出动画 - 添加指示器和状态标签
       if (animationType === 'recursion-enter' || animationType === 'recursion-exit') {
-        const currentNode = nodes.find(n => n.id === currentNodeId);
+        const currentNode = realNodes.find(n => n.id === currentNodeId);
         if (currentNode) {
           const isEnter = animationType === 'recursion-enter';
           
@@ -429,7 +533,7 @@ export function TreeVisualization({ root, currentStep }: TreeVisualizationProps)
 
       // 更新直径动画 - 显示直径计算过程
       if (animationType === 'update-diameter') {
-        const currentNode = nodes.find(n => n.id === currentNodeId);
+        const currentNode = realNodes.find(n => n.id === currentNodeId);
         if (currentNode) {
           // 直径更新标签背景
           g.append('rect')

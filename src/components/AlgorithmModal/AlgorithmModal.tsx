@@ -1,17 +1,37 @@
+/**
+ * 算法思路弹窗组件
+ * 
+ * 以图文并茂的方式详细解释二叉树直径算法的核心思路，
+ * 帮助用户理解算法的原理和实现。
+ */
+
 import { useEffect, useCallback } from 'react';
 import './AlgorithmModal.css';
 
+/**
+ * AlgorithmModal 组件的属性接口
+ */
 interface AlgorithmModalProps {
+  /** 弹窗是否打开 */
   isOpen: boolean;
+  /** 关闭弹窗的回调函数 */
   onClose: () => void;
 }
 
 /**
- * 算法思路弹窗组件
- * 详细解释二叉树直径算法的核心思路
+ * AlgorithmModal 组件
+ * 
+ * 功能：
+ * - 显示算法的详细思路讲解
+ * - 包含问题定义、核心思路、递归过程、示例分析、复杂度分析等内容
+ * - 支持 ESC 键关闭
+ * - 点击遮罩层关闭
+ * - 打开时禁止背景滚动
  */
 export function AlgorithmModal({ isOpen, onClose }: AlgorithmModalProps) {
-  // ESC键关闭弹窗
+  /**
+   * 键盘事件处理：ESC 键关闭弹窗
+   */
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
       onClose();

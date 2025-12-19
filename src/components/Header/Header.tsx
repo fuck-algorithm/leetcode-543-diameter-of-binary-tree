@@ -1,11 +1,28 @@
+/**
+ * 页面头部组件
+ * 
+ * 显示题目标题、LeetCode链接、GitHub源码链接和算法思路按钮
+ */
+
 import { useState } from 'react';
 import { AlgorithmModal } from '../AlgorithmModal/AlgorithmModal';
 import './Header.css';
 
+// LeetCode 题目链接
 const LEETCODE_URL = 'https://leetcode.cn/problems/diameter-of-binary-tree/';
+// GitHub 源码仓库链接
 const GITHUB_URL = 'https://github.com/fuck-algorithm/leetcode-543-diameter-of-binary-tree';
 
+/**
+ * Header 组件
+ * 
+ * 功能：
+ * - 显示题目编号和标题，点击跳转到 LeetCode 原题
+ * - 提供"算法思路"按钮，点击弹出算法讲解弹窗
+ * - 提供 GitHub 源码链接
+ */
 export function Header() {
+  // 控制算法思路弹窗的显示状态
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (

@@ -71,20 +71,42 @@ export function buildTreeFromArray(arr: (number | null)[]): TreeNode | null {
  * - depth: 节点深度，用于布局计算
  * - highlighted: 是否高亮显示
  * - isOnDiameterPath: 是否在直径路径上
+ * - isNull: 是否为空节点
  * 
  * @param node - 原始二叉树节点
  * @param id - 节点ID，默认为'0'（根节点）
  * @param depth - 节点深度，默认为0
  * @param parent - 父节点引用，默认为null
+ * @param includeNullNodes - 是否包含空节点，默认为true
  * @returns D3格式的树节点
  */
 export function convertToD3Tree(
   node: TreeNode | null,
   id: string = '0',
   depth: number = 0,
-  parent: D3TreeNode | null = null
+  parent: D3TreeNode | null = null,
+  includeNullNodes: boolean = true
 ): D3TreeNode | null {
-  if (!node) return null;
+  // 如果是空节点且需要显示空节点
+  if (!node) {
+    // 只在有父节点时创建空节点（表示该位置本应有节点但为空）
+    if (includeNullNodes && parent && !parent.isNull) {
+      return {
+        id,
+        val: null,
+        x: 0,
+        y: 0,
+        left: null,
+        right: null,
+        parent,
+        depth,
+        highlighted: false,
+        isOnDiameterPath: false,
+        isNull: true,
+      };
+    }
+    return null;
+  }
 
   // 创建D3节点，初始坐标为0，后续由布局算法计算
   const d3Node: D3TreeNode = {
@@ -98,12 +120,37 @@ export function convertToD3Tree(
     depth,
     highlighted: false,
     isOnDiameterPath: false,
+    isNull: false,
   };
 
   // 递归转换子节点
   // 左子节点ID后缀为'-L'，右子节点ID后缀为'-R'
-  d3Node.left = convertToD3Tree(node.left, `${id}-L`, depth + 1, d3Node);
-  d3Node.right = convertToD3Tree(node.right, `${id}-R`, depth + 1, d3Node);
+  const hasLeftChild = node.left !== null;
+  const hasRightChild = node.right !== null;
+  const isLeaf = !hasLeftChild && !hasRightChild;
+
+  // 如果是叶子节点，不创建空子节点
+  if (isLeaf) {
+    d3Node.left = null;
+    d3Node.right = null;
+  } else {
+    // 非叶子节点，递归处理子节点
+    // 如果某一侧没有子节点，会创建一个空节点来显示 NULL
+    d3Node.left = convertToD3Tree(
+      node.left, 
+      `${id}-L`, 
+      depth + 1, 
+      d3Node, 
+      includeNullNodes
+    );
+    d3Node.right = convertToD3Tree(
+      node.right, 
+      `${id}-R`, 
+      depth + 1, 
+      d3Node, 
+      includeNullNodes
+    );
+  }
 
   return d3Node;
 }
@@ -115,10 +162,10 @@ export function convertToD3Tree(
  * 
  * 算法思路：
  * 1. 首先使用后序遍历计算每个节点的相对x坐标
- *    - 叶子节点按顺序排列
+ *    - 叶子节点（包括空节点）按顺序排列
  *    - 父节点位于子节点中间
  * 2. 计算树的实际边界（最小/最大x坐标）
- * 3. 将整棵树平移到画布中央
+ * 3. 将整棵树平移到画布中央（水平和垂直都居中）
  * 
  * @param root - D3格式的树根节点
  * @param width - 画布宽度
@@ -133,11 +180,9 @@ export function calculateTreeLayout(
 
   const maxDepth = getMaxDepth(root);
   // 节点之间的最小水平间距
-  const nodeSpacing = 50;
+  const nodeSpacing = 60;
   // 层级之间的垂直间距，根据树的深度自适应
-  const levelHeight = Math.min(80, (height - 100) / (maxDepth + 1));
-  // 顶部边距，留出空间显示状态标签
-  const topPadding = 50;
+  const levelHeight = Math.min(80, (height - 150) / (maxDepth + 1));
 
   // 用于追踪下一个可用的x坐标
   let nextX = 0;
@@ -146,9 +191,9 @@ export function calculateTreeLayout(
    * 后序遍历计算每个节点的x坐标
    * 
    * 算法逻辑：
-   * - 叶子节点：分配下一个可用的x坐标
-   * - 只有左子树：父节点在左子树右边界
-   * - 只有右子树：父节点在右子树左边界
+   * - 叶子节点（包括空节点）：分配下一个可用的x坐标
+   * - 只有左子树：父节点在左子树右边界偏右
+   * - 只有右子树：父节点在右子树左边界偏左
    * - 有两个子树：父节点在两个子树中间
    * 
    * @param node - 当前处理的节点
@@ -162,17 +207,17 @@ export function calculateTreeLayout(
     const rightBounds = calculateXPositions(node.right);
 
     if (!leftBounds && !rightBounds) {
-      // 叶子节点：分配下一个可用的x坐标
+      // 叶子节点（包括空节点）：分配下一个可用的x坐标
       node.x = nextX;
       nextX += nodeSpacing;
       return { minX: node.x, maxX: node.x };
     } else if (!leftBounds) {
-      // 只有右子树：父节点在右子树左边界
-      node.x = rightBounds!.minX;
+      // 只有右子树：父节点在右子树左边界偏左
+      node.x = rightBounds!.minX - nodeSpacing / 4;
       return { minX: node.x, maxX: rightBounds!.maxX };
     } else if (!rightBounds) {
-      // 只有左子树：父节点在左子树右边界
-      node.x = leftBounds.maxX;
+      // 只有左子树：父节点在左子树右边界偏右
+      node.x = leftBounds.maxX + nodeSpacing / 4;
       return { minX: leftBounds.minX, maxX: node.x };
     } else {
       // 有两个子树：父节点在两个子树中间
@@ -189,7 +234,7 @@ export function calculateTreeLayout(
    */
   function calculateYPositions(node: D3TreeNode | null, depth: number): void {
     if (!node) return;
-    node.y = topPadding + depth * levelHeight;
+    node.y = depth * levelHeight;
     calculateYPositions(node.left, depth + 1);
     calculateYPositions(node.right, depth + 1);
   }
@@ -200,9 +245,13 @@ export function calculateTreeLayout(
 
   if (!bounds) return;
 
-  // 计算树的实际宽度和需要的偏移量，使树居中
+  // 计算树的实际尺寸
   const treeWidth = bounds.maxX - bounds.minX;
+  const treeHeight = maxDepth * levelHeight;
+
+  // 计算偏移量，使树在画布中央（水平和垂直都居中）
   const offsetX = (width - treeWidth) / 2 - bounds.minX;
+  const offsetY = (height - treeHeight) / 2;
 
   /**
    * 应用偏移量，将树移动到画布中央
@@ -212,6 +261,7 @@ export function calculateTreeLayout(
   function applyOffset(node: D3TreeNode | null): void {
     if (!node) return;
     node.x += offsetX;
+    node.y += offsetY;
     applyOffset(node.left);
     applyOffset(node.right);
   }
@@ -236,11 +286,53 @@ export function getMaxDepth(node: D3TreeNode | null): number {
  * 使用前序遍历收集所有节点，用于D3绑定数据
  * 
  * @param root - 树根节点
+ * @param includeNullNodes - 是否包含空节点，默认为true
  * @returns 所有节点的数组
  */
-export function getAllNodes(root: D3TreeNode | null): D3TreeNode[] {
+export function getAllNodes(root: D3TreeNode | null, includeNullNodes: boolean = true): D3TreeNode[] {
   if (!root) return [];
-  return [root, ...getAllNodes(root.left), ...getAllNodes(root.right)];
+  
+  // 如果不包含空节点且当前节点是空节点，则跳过
+  if (!includeNullNodes && root.isNull) return [];
+  
+  return [
+    root, 
+    ...getAllNodes(root.left, includeNullNodes), 
+    ...getAllNodes(root.right, includeNullNodes)
+  ];
+}
+
+/**
+ * 获取所有非空节点
+ * 
+ * 便捷函数，只返回非空节点
+ * 
+ * @param root - 树根节点
+ * @returns 所有非空节点的数组
+ */
+export function getRealNodes(root: D3TreeNode | null): D3TreeNode[] {
+  return getAllNodes(root, false);
+}
+
+/**
+ * 获取所有空节点
+ * 
+ * 便捷函数，只返回空节点
+ * 
+ * @param root - 树根节点
+ * @returns 所有空节点的数组
+ */
+export function getNullNodes(root: D3TreeNode | null): D3TreeNode[] {
+  if (!root) return [];
+  
+  const result: D3TreeNode[] = [];
+  if (root.isNull) {
+    result.push(root);
+  }
+  result.push(...getNullNodes(root.left));
+  result.push(...getNullNodes(root.right));
+  
+  return result;
 }
 
 /**
@@ -249,18 +341,21 @@ export function getAllNodes(root: D3TreeNode | null): D3TreeNode[] {
  * 收集所有父子节点对，用于绘制连接线
  * 
  * @param root - 树根节点
- * @returns 边的数组，每条边是[父节点, 子节点]的元组
+ * @returns 边的数组，每条边是[父节点, 子节点, 是否连接到空节点]的元组
  */
-export function getAllEdges(root: D3TreeNode | null): [D3TreeNode, D3TreeNode][] {
+export function getAllEdges(root: D3TreeNode | null): [D3TreeNode, D3TreeNode, boolean][] {
   if (!root) return [];
-  const edges: [D3TreeNode, D3TreeNode][] = [];
+  // 空节点不会有子节点
+  if (root.isNull) return [];
+  
+  const edges: [D3TreeNode, D3TreeNode, boolean][] = [];
   
   if (root.left) {
-    edges.push([root, root.left]);
+    edges.push([root, root.left, root.left.isNull]);
     edges.push(...getAllEdges(root.left));
   }
   if (root.right) {
-    edges.push([root, root.right]);
+    edges.push([root, root.right, root.right.isNull]);
     edges.push(...getAllEdges(root.right));
   }
   

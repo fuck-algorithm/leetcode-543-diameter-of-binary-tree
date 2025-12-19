@@ -1,7 +1,23 @@
+/**
+ * 微信交流群浮动按钮组件
+ * 
+ * 在页面右下角显示一个浮动按钮，鼠标悬停时显示微信二维码
+ * 用户可以扫码加入算法交流群
+ */
+
 import { useState } from 'react';
 import './WeChatFloat.css';
 
+/**
+ * WeChatFloat 组件
+ * 
+ * 功能：
+ * - 显示浮动的"交流群"按钮
+ * - 鼠标悬停时弹出微信二维码
+ * - 提示用户扫码发送关键词加入群聊
+ */
 export function WeChatFloat() {
+  // 控制二维码弹窗的显示状态
   const [isHovered, setIsHovered] = useState(false);
 
   return (

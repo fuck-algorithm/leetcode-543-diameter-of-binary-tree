@@ -1,17 +1,48 @@
+/**
+ * 控制面板组件
+ * 
+ * 提供算法演示的播放控制功能，包括：
+ * - 播放/暂停
+ * - 上一步/下一步
+ * - 进度条拖拽
+ * - 重置
+ * - 键盘快捷键支持
+ */
+
 import { useEffect, useCallback } from 'react';
 import './ControlPanel.css';
 
+/**
+ * ControlPanel 组件的属性接口
+ */
 interface ControlPanelProps {
+  /** 当前步骤索引（从0开始） */
   currentStep: number;
+  /** 总步骤数 */
   totalSteps: number;
+  /** 是否正在自动播放 */
   isPlaying: boolean;
+  /** 上一步回调 */
   onPrevious: () => void;
+  /** 下一步回调 */
   onNext: () => void;
+  /** 播放/暂停切换回调 */
   onPlayPause: () => void;
+  /** 跳转到指定步骤回调 */
   onSeek: (step: number) => void;
+  /** 重置回调 */
   onReset: () => void;
 }
 
+/**
+ * ControlPanel 组件
+ * 
+ * 功能：
+ * - 显示播放控制按钮（重置、上一步、播放/暂停、下一步）
+ * - 显示当前步骤和总步骤数
+ * - 提供可点击/拖拽的进度条
+ * - 支持键盘快捷键：左箭头（上一步）、右箭头（下一步）、空格（播放/暂停）
+ */
 export function ControlPanel({
   currentStep,
   totalSteps,
@@ -22,6 +53,7 @@ export function ControlPanel({
   onSeek,
   onReset,
 }: ControlPanelProps) {
+  // 计算进度百分比，用于进度条显示
   const progress = totalSteps > 1 ? (currentStep / (totalSteps - 1)) * 100 : 0;
 
   // 键盘快捷键
